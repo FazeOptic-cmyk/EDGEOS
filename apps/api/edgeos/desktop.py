@@ -231,7 +231,7 @@ def _wait_for_parent_exit(parent_pid: int) -> None:
     if sys.platform == "win32":
         synchronize = 0x00100000
         infinite = 0xFFFFFFFF
-        kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)  # type: ignore[attr-defined]
+        kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
         kernel32.OpenProcess.argtypes = [wintypes.DWORD, wintypes.BOOL, wintypes.DWORD]
         kernel32.OpenProcess.restype = wintypes.HANDLE
         kernel32.WaitForSingleObject.argtypes = [wintypes.HANDLE, wintypes.DWORD]

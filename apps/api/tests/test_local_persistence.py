@@ -7,6 +7,7 @@ from pathlib import Path
 import pytest
 
 from conftest import decimal_offer
+from edgeos import local_persistence
 from edgeos.arbitrage import calculate_arbitrage
 from edgeos.domain import AlertCreate, FillCreate, PositionCreate, SettlementCreate, WatchlistCreate
 from edgeos.local_persistence import (
@@ -260,6 +261,42 @@ def test_local_backup_uses_consistent_sqlite_copy_inside_user_data(tmp_path: Pat
     target = tmp_path / "backups" / "edgeos-backup.sqlite3"
 
     state.backup(target)
+
+    backup = LocalStateDatabase(target, allowed_root=tmp_path)
+    assert backup.load("test_state") == {"amount": Decimal("4.56")}
+
+
+def test_local_backup_closes_connections_before_atomic_replace(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    state = database(tmp_path)
+    state.save("test_state", {"amount": Decimal("4.56")})
+    target = tmp_path / "backups" / "edgeos-backup.sqlite3"
+    connections: list[sqlite3.Connection] = []
+    original_connect = sqlite3.connect
+    original_replace = local_persistence.os.replace
+
+    def track_connection(*args, **kwargs) -> sqlite3.Connection:
+        connection = original_connect(*args, **kwargs)
+        connections.append(connection)
+        return connection
+
+    def replace_closed_database(source: Path, destination: Path) -> None:
+        # Windows cannot rename the temporary database while SQLite holds it open.
+        assert connections
+        for connection in connections:
+            with pytest.raises(sqlite3.ProgrammingError, match="closed database"):
+                connection.execute("select 1")
+        original_replace(source, destination)
+
+    with monkeypatch.context() as patch:
+        patch.setattr(local_persistence.sqlite3, "connect", track_connection)
+        patch.setattr(local_persistence.os, "replace", replace_closed_database)
+        try:
+            state.backup(target)
+        finally:
+            for connection in connections:
+                connection.close()
 
     backup = LocalStateDatabase(target, allowed_root=tmp_path)
     assert backup.load("test_state") == {"amount": Decimal("4.56")}

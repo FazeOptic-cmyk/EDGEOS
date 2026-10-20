@@ -55,6 +55,8 @@ jobs:
       - run: uv sync --all-groups --locked
       - run: uv run ruff check .
       - run: uv run mypy edgeos
+      - name: Type-check Windows-only API branches
+        run: uv run mypy --platform win32 edgeos
       - run: uv run pytest
 
   database:

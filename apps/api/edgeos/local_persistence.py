@@ -13,6 +13,7 @@ import json
 import os
 import sqlite3
 from collections import defaultdict
+from contextlib import closing
 from datetime import UTC, datetime
 from decimal import Decimal
 from pathlib import Path
@@ -263,7 +264,9 @@ class LocalStateDatabase:
         temporary = resolved.with_name(f".{resolved.name}.{uuid4().hex}.tmp")
         with self._lock:
             try:
-                with self._connect() as source, sqlite3.connect(temporary) as destination_db:
+                # Connection context managers only commit/rollback; close both
+                # handles before replacing the temporary database on Windows.
+                with closing(self._connect()) as source, closing(sqlite3.connect(temporary)) as destination_db:
                     source.backup(destination_db)
                 if os.name != "nt":
                     os.chmod(temporary, 0o600)

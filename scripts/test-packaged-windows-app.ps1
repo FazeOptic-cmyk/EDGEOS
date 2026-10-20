@@ -22,7 +22,12 @@ if (-not (Test-Path -LiteralPath $desktopExecutable -PathType Leaf)) {
 }
 
 $smokeNonce = "windows-electron-$([Guid]::NewGuid().ToString('N'))"
-$logPath = Join-Path $env:APPDATA "EDGEOS/logs/edgeos-desktop.log"
+if ([string]::IsNullOrWhiteSpace($env:APPDATA) -or
+    -not [System.IO.Path]::IsPathFullyQualified($env:APPDATA)) {
+    throw "The packaged Electron smoke test requires an absolute APPDATA directory."
+}
+$smokeProfile = [System.IO.Path]::GetFullPath((Join-Path $env:APPDATA "EDGEOS"))
+$logPath = Join-Path $smokeProfile "logs/edgeos-desktop.log"
 $pathSeparators = [char[]]@(
     [System.IO.Path]::DirectorySeparatorChar,
     [System.IO.Path]::AltDirectorySeparatorChar
@@ -41,10 +46,14 @@ function Get-PackagedProcesses {
 
 $process = $null
 try {
-    $process = Start-Process `
-        -FilePath $desktopExecutable `
-        -ArgumentList @("--edgeos-smoke-test=$smokeNonce") `
-        -PassThru
+    $startInfo = [System.Diagnostics.ProcessStartInfo]::new()
+    $startInfo.FileName = $desktopExecutable
+    $startInfo.UseShellExecute = $false
+    $startInfo.ArgumentList.Add("--edgeos-smoke-test=$smokeNonce")
+    # Keep the parent's temporary APPDATA contract without relying on Windows
+    # known-folder lookup to honor it, or changing the parent's environment.
+    $startInfo.Environment["EDGEOS_SMOKE_USER_DATA_DIR"] = $smokeProfile
+    $process = [System.Diagnostics.Process]::Start($startInfo)
 
     if (-not $process.WaitForExit($TimeoutSeconds * 1000)) {
         throw "Packaged EDGEOS.exe did not complete its integrated smoke test within $TimeoutSeconds seconds."

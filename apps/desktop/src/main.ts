@@ -24,21 +24,27 @@ import {
   readDesktopConnection, saveDesktopConnection, verifyHostedConnection, type DesktopConnection,
 } from "./connection";
 import { CONNECTION_SETTINGS_URL } from "./connection-settings";
+import { resolveSmokeTestConfiguration } from "./smoke-profile";
 
 // Keep Electron's runtime identity (and therefore its userData directory)
 // deterministic instead of deriving it from the scoped workspace package name.
 app.setName("EDGEOS");
 
+const smokeTestConfiguration = resolveSmokeTestConfiguration(
+  process.argv, process.env.EDGEOS_SMOKE_USER_DATA_DIR,
+);
+const smokeTestNonce = smokeTestConfiguration?.nonce ?? null;
+if (smokeTestConfiguration) {
+  // Windows known-folder lookup can ignore APPDATA overrides. Set the exact
+  // smoke profile before acquiring the singleton lock or creating any session.
+  mkdirSync(smokeTestConfiguration.userData, { recursive: true });
+  app.setPath("userData", smokeTestConfiguration.userData);
+  app.setPath("sessionData", smokeTestConfiguration.userData);
+}
+
 const instanceNonce = randomBytes(32).toString("base64url");
 const shutdownToken = randomBytes(32).toString("base64url");
 const apiToken = randomBytes(32).toString("base64url");
-const smokeTestNonce = (() => {
-  const prefix = "--edgeos-smoke-test=";
-  const argument = process.argv.find((value) => value.startsWith(prefix));
-  if (!argument) return null;
-  const nonce = argument.slice(prefix.length);
-  return /^[A-Za-z0-9-]{20,100}$/u.test(nonce) ? nonce : null;
-})();
 const LOG_LIMIT_BYTES = 4 * 1024 * 1024;
 
 let mainWindow: BrowserWindow | null = null;
@@ -571,7 +577,7 @@ async function startConfiguredDesktop(): Promise<void> {
 }
 
 async function startDesktop(): Promise<void> {
-  app.setAppLogsPath(join(app.getPath("appData"), "EDGEOS", "logs"));
+  app.setAppLogsPath(join(app.getPath("userData"), "logs"));
   logFile = join(app.getPath("logs"), "edgeos-desktop.log");
   mkdirSync(dirname(logFile), { recursive: true });
   localDataRoot = app.getPath("userData");

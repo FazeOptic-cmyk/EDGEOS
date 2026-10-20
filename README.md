@@ -324,6 +324,16 @@ a deployed, monitored worker, not for the local Windows package or an open tab.
 
 ## Windows installer
 
+No paid GitHub minutes are required to build on your own x64 Windows PC.
+Download and extract this repository, install PowerShell 7, Node.js 22, and uv,
+then double-click **BUILD-EDGEOS.cmd**. It asks before downloading dependencies
+and running the complete build/automated Windows acceptance checks. The actual
+installer is shown only after its file size/hash match the generated manifest
+and all invoked checks succeed. See the
+[local Windows walkthrough](docs/WINDOWS_INSTALLER.md#build-privately-on-your-own-windows-pc-without-actions-minutes).
+This launcher is source tooling, not a prebuilt Setup.exe. A Windows machine
+must run it; no installer artifact exists from the blocked GitHub run.
+
 The repository has an x64 per-user NSIS build pipeline. Standard artifacts bundle
 the web UI and local API in explicitly labeled demo market-data mode. The installed app keeps
 paper positions/fills/settlements, saved opportunities, watchlists, alert rules,

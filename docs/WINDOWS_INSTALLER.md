@@ -20,6 +20,74 @@ the bundled market fixture live.
 The advised real-money capital for this release is **$0**: it is research and
 paper-trading software, not an execution system or a basis for unattended bets.
 
+## Build privately on your own Windows PC without Actions minutes
+
+The account's 2,000 included Actions minutes were exhausted on 2026-10-20.
+GitHub refused to allocate the Windows runner for run
+[39475219416](https://github.com/FazeOptic-cmyk/EDGEOS/actions/runs/39475219416);
+zero build steps ran and zero artifacts were produced. The generic job error
+mentioned failed payments or spending limits; the account screenshots showed
+zero billable usage and a zero paid-overage budget, not an unpaid invoice.
+The local route below uses your own computer and does not change those budgets.
+
+1. On an x64 Windows PC, sign into GitHub and download the source through
+   [EDGEOS → Code → Download ZIP](https://github.com/FazeOptic-cmyk/EDGEOS).
+   Extract the **whole ZIP** into a writable folder with a short path, such as
+   `C:\EDGEOS`. Do not run the launcher from inside the compressed ZIP.
+   The repository stays private; do not put credentials in a download URL.
+2. Install the one-time build prerequisites from Windows Terminal:
+
+   ```powershell
+   winget install --exact --id Microsoft.PowerShell --source winget
+   winget install --exact --id OpenJS.NodeJS.22 --source winget
+   winget install --exact --id astral-sh.uv --source winget
+   ```
+
+   WinGet may request package agreements or Windows administrator approval for
+   these tools. Review those prompts. The launcher itself does not automatically
+   install system tools, alter billing, or register a persistent runner. If
+   WinGet is unavailable, use the official installers linked below; do not use
+   an unofficial download mirror. Close and reopen Terminal after installation
+   so the updated PATH is available.
+3. Double-click **BUILD-EDGEOS.cmd** in the extracted source folder. Read its
+   summary and enter `BUILD` to consent to downloading dependencies and running
+   the build and local acceptance tests. Internet and several GB of free space
+   are needed. The launcher obtains Python 3.12 through uv, runs the API/web/
+   desktop checks, and invokes the existing Windows packager. It runs PowerShell
+   with process-scoped `RemoteSigned`, not a persistent policy change; enforced
+   organization policies still take precedence. If downloaded scripts are
+   blocked, stop and inspect the message rather than disabling Windows security.
+4. Wait for **BUILD AND AUTOMATED WINDOWS ACCEPTANCE PASSED**. Only after all
+   invoked checks succeed does the launcher verify the actual installer's size
+   and SHA-256 against the build manifest and open `artifacts\windows`.
+   Double-click `EDGEOS Setup <version>.exe` to install it for normal use.
+
+The build briefly installs, launches, and uninstalls its generated app for
+acceptance, and tests Start Menu/desktop shortcuts. It refuses to overwrite an
+existing EDGEOS installation. Electron smoke tests use an explicit isolated
+profile set before startup; they do not rely on Windows inheriting `APPDATA`
+overrides. Normal app launches ignore this test-only profile variable.
+An isolated-profile retention test is not proof of all native Windows uninstall
+behavior; the packager retains the explicit `deleteAppDataOnUninstall: false`
+policy. Interactive wizard/security behavior still needs a human check.
+
+The launcher records output in `logs\windows-build-*.log`. On failure it reports
+failure and does not call an intermediate installer acceptance-tested. Share the
+final error or a reviewed/redacted log for diagnosis. No installer has been
+verified on your computer until the build actually completes there.
+
+Without a signing certificate the generated file is **unsigned development
+output**, not an authenticated-publisher production release. Normal installation
+does not require Node/Python on the destination PC: the payload includes its
+runtime and starts the local services automatically. Building it, however, does
+require the one-time tools above.
+
+Official prerequisite references:
+[PowerShell](https://learn.microsoft.com/en-us/powershell/scripting/install/install-powershell-on-windows),
+[Node.js](https://nodejs.org/en/download),
+[uv installation](https://docs.astral.sh/uv/getting-started/installation/),
+and [uv-managed Python](https://docs.astral.sh/uv/guides/install-python/).
+
 ## Install a published artifact
 
 The Windows GitHub Actions workflow labels artifacts by trust level:

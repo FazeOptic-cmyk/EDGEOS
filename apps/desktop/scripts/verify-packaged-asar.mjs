@@ -17,7 +17,9 @@ for (const required of ["dist/src/main.js", "dist/src/resource-integrity.json"])
   if (!archiveEntries.has(required)) throw new Error(`Packaged ASAR is missing ${required}`);
 }
 
-const manifest = JSON.parse(extractFile(archive, "dist/src/resource-integrity.json").toString("utf8"));
+// @electron/asar 3.x splits archive directory names on the host's path.sep.
+// Keep slash-normalized inventory keys above, but use native separators here.
+const manifest = JSON.parse(extractFile(archive, ["dist", "src", "resource-integrity.json"].join(sep)).toString("utf8"));
 if (manifest.schemaVersion !== 1 || manifest.algorithm !== "sha256" || !Array.isArray(manifest.files) || manifest.files.length === 0) {
   throw new Error("Packaged resource-integrity manifest has an invalid structure");
 }

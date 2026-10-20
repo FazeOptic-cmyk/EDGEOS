@@ -43,11 +43,12 @@ function Assert-RegularPath {
 }
 
 $verifierPath = Join-Path $RepositoryRoot "apps/desktop/scripts/verify-electron-fuses.mjs"
+$asarVerifierPath = Join-Path $RepositoryRoot "apps/desktop/scripts/verify-packaged-asar.mjs"
 $configPath = Join-Path $RepositoryRoot "apps/desktop/electron-builder.yml"
 $packagePath = Join-Path $RepositoryRoot "apps/desktop/package.json"
 $builderPath = Join-Path $RepositoryRoot "scripts/build-windows-installer.ps1"
 $storagePath = Join-Path $RepositoryRoot "scripts/windows-build-storage.ps1"
-foreach ($required in @($verifierPath, $configPath, $packagePath, $builderPath, $storagePath)) {
+foreach ($required in @($verifierPath, $asarVerifierPath, $configPath, $packagePath, $builderPath, $storagePath)) {
     Assert-RegularPath $required
     if (-not (Test-Path -LiteralPath $required -PathType Leaf)) {
         throw "The extracted source is missing: $required"
@@ -73,6 +74,11 @@ $edits = @(
         Path = $configPath
         OldHash = "b05c0e00a155b0c1c897501d2d6c47c570cb0a795c00bc45eacc80adbb8c6394"
         NewHash = "c1e822b6a5a6c78c796e58308d653a26a77cad8b8ae6a10da8bf8b180620827f"
+    },
+    @{
+        Path = $asarVerifierPath
+        OldHash = "7698af51548f34c0950dbe9db51d9123739a0ad436a4c4ec5f3d5ef06daff3d6"
+        NewHash = "c2e9b23edd3fbc7ccc87dafcbe7f18f2d3454e13eb2192b43309351358b4bfd1"
     }
 )
 foreach ($edit in $edits) {
@@ -90,6 +96,8 @@ foreach ($edit in $edits) {
             $normalized = $normalized.Replace('  [FuseV1Options.GrantFileProtocolExtraPrivileges, disabled],', "  [FuseV1Options.GrantFileProtocolExtraPrivileges, disabled],`n  [wasmTrapHandlers, enabled],")
             $normalized = $normalized.Replace('${FuseV1Options[option]}', '${FuseV1Options[option] ?? (option === wasmTrapHandlers ? "WasmTrapHandlers" : option)}')
             $normalized = $normalized.Replace('console.log("Verified all eight Electron fuse states in the packaged executable.");', 'console.log(`Verified all ${expected.size} Electron fuse states in the packaged executable.`);')
+        } elseif ($edit.Path -ceq $asarVerifierPath) {
+            $normalized = $normalized.Replace('extractFile(archive, "dist/src/resource-integrity.json")', 'extractFile(archive, ["dist", "src", "resource-integrity.json"].join(sep))')
         } else {
             $normalized = $normalized.Replace('  loadBrowserProcessSpecificV8Snapshot: true', '  loadBrowserProcessSpecificV8Snapshot: false')
         }
@@ -127,7 +135,7 @@ if (-not $PatchOnly) {
         throw "EDGEOS is already installed. Use a clean Windows test account or VM for installed acceptance; this repair will not remove your installation."
     }
     Write-Host "Source folder: $RepositoryRoot"
-    Write-Host "This backs up and repairs the two Electron fuse files, then repackages the existing staged payload."
+    Write-Host "This backs up and repairs the Electron fuse files and Windows ASAR lookup, then repackages the existing staged payload."
     Write-Host "It replaces generated apps/desktop/release and artifacts/windows output, and runs the existing verification and install/launch/uninstall acceptance checks."
     Write-Host "Dependencies, the web build, and the Python API build are reused. Test user data stays isolated by the existing build scripts."
     if ((Read-Host "Type REPAIR to continue, or press Enter to cancel") -cne "REPAIR") {
@@ -146,7 +154,7 @@ Push-Location $RepositoryRoot
 try {
     Start-Transcript -LiteralPath $transcriptPath | Out-Null
     $transcriptStarted = $true
-    # Back up both original files before either edit, preserving their exact bytes.
+    # Back up all original files before any edit, preserving their exact bytes.
     foreach ($edit in $edits) {
         Copy-Item -LiteralPath $edit.Path -Destination (Join-Path $repairDirectory ([IO.Path]::GetFileName($edit.Path)))
     }
@@ -155,7 +163,7 @@ try {
             [IO.File]::WriteAllText($edit.Path, $edit.Updated, [Text.UTF8Encoding]::new($false))
         }
     }
-    Write-Host "Source repair ready: all nine fuses are checked; the unused browser-specific snapshot is disabled."
+    Write-Host "Source repair ready: all nine fuses are checked; the unused browser-specific snapshot is disabled; ASAR lookup uses native path separators."
     Write-Host "Original files preserved in: $repairDirectory"
     if ($PatchOnly) {
         Write-Host "PatchOnly completed. No installer was built or acceptance-tested."

@@ -13,7 +13,7 @@
     "clean": "node scripts/clean.mjs",
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "npm run build && node dist/tests/runtime.test.js && node scripts/verify-electron-fuses.test.mjs",
+    "test": "npm run build && node dist/tests/runtime.test.js && node scripts/verify-electron-fuses.test.mjs && node scripts/verify-packaged-asar.test.mjs",
     "verify:resources": "node scripts/verify-resources.mjs",
     "start": "npm run build && electron .",
     "dist:win": "npm run build && npm run verify:resources && electron-builder --win nsis --publish never"

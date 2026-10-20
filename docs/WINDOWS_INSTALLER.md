@@ -145,7 +145,7 @@ pwsh -NoProfile -ExecutionPolicy RemoteSigned -File .\repair-windows-fuses.ps1
 ```
 
 Enter `REPAIR` at the prompt. The helper accepts only the known affected source
-or its own already-repaired files; it refuses unknown edits. It backs up both
+or its own already-repaired files; it refuses unknown edits. It backs up the affected
 files under `logs/electron-fuse-repair-*`, retains the dependency caches and
 staged web/API builds, and runs `-PackageOnly` with source-drive caches. That
 replaces generated release/artifact output and retains the existing signature,
@@ -159,6 +159,31 @@ the locked builder applied its settings. All 17 fuse regression tests and 28
 desktop tests pass on Node 22.23.3 in Linux. This is binary inspection and test
 evidence, **not** a Windows launch/install result; native acceptance must still
 finish on the Windows build host.
+
+### If the ASAR verifier lists a manifest but cannot extract it on Windows
+
+`"dist/src/resource-integrity.json" was not found in this archive` after the
+required-entry listing has passed can be a path-separator error, not a missing
+manifest. The pinned `@electron/asar` 3.4.1 splits its lookup directory by the
+host's `path.sep`; a slash-separated lookup fails on Windows even though the
+archive listing contains the file. The corrected verifier uses native
+separators for extraction while keeping portable slash-separated manifest keys.
+It still validates the complete manifest and every packaged resource hash.
+
+The current `repair-windows-fuses.ps1` also repairs this lookup and backs up
+all three affected source files. If the earlier fuse-only helper has already
+been applied, the one source correction is:
+
+```javascript
+extractFile(archive, ["dist", "src", "resource-integrity.json"].join(sep))
+```
+
+This replaces `extractFile(archive, "dist/src/resource-integrity.json")` in
+`apps/desktop/scripts/verify-packaged-asar.mjs`; `sep` is already imported.
+After backing up and correcting that source file, rerun the existing repair
+helper to use the established packaging and isolated acceptance workflow.
+Do not bypass the ASAR verification or run a smoke script against your ordinary
+application profile.
 
 ### If C: ran out of space during dependency installation
 

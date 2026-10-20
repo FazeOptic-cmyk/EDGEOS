@@ -171,7 +171,8 @@ separators for extraction while keeping portable slash-separated manifest keys.
 It still validates the complete manifest and every packaged resource hash.
 
 The current `repair-windows-fuses.ps1` also repairs this lookup and backs up
-all three affected source files. If the earlier fuse-only helper has already
+all three affected source files. It also fixes the web dependency-copy rule
+described below. If the earlier fuse-only helper has already
 been applied, the one source correction is:
 
 ```javascript
@@ -184,6 +185,31 @@ After backing up and correcting that source file, rerun the existing repair
 helper to use the established packaging and isolated acceptance workflow.
 Do not bypass the ASAR verification or run a smoke script against your ordinary
 application profile.
+
+### If packaged resources differ from the ASAR integrity manifest
+
+The pinned electron-builder 26.15.3 copy filter silently excludes a
+`node_modules` directory directly under a copy source, even when its filter is
+`**/*`. Copying from `resources/web` therefore omits Next standalone's root
+dependencies. The corrected mapping copies from `resources` to `.` with the
+filter `web/**/*`; the dependency directory is then `web/node_modules` and is
+included. The separate API mapping is unchanged. The manifest and runtime
+verifiers still require the exact file set and SHA-256 hashes.
+
+Using the actual locked builder on the existing Linux Next standalone output
+reproduced **2,015 missing dependency files** out of **2,212**. With the corrected
+mapping, all 2,212 files (70,238,867 bytes) matched their source SHA-256 hashes.
+This proves the resource-copy correction, not native Windows launch/installation.
+The verifier now reports declared/packaged counts and the first 20 missing and
+unexpected relative paths if a different mismatch remains.
+
+Replace an older downloaded `repair-windows-fuses.ps1` with the current helper
+and run it from the same extracted source folder. It accepts the original
+affected source and known prior repairs, backs up all three affected files,
+and repackages the existing web/API build with all acceptance gates retained.
+An old helper will reject a manually changed copy rule, so use the updated
+helper instead of bypassing its source guards. Do not delete or regenerate the
+manifest to hide missing dependencies.
 
 ### If C: ran out of space during dependency installation
 

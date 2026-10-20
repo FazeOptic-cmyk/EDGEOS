@@ -63,7 +63,15 @@ if (resourcesArgument) {
   await walk(resolve(resourcesRoot, "api"));
 
   if (actualPaths.size !== declaredPaths.size || [...actualPaths].some((path) => !declaredPaths.has(path))) {
-    throw new Error("Packaged web/API resource set does not exactly match the ASAR integrity manifest");
+    const missing = [...declaredPaths].filter((path) => !actualPaths.has(path)).sort();
+    const unexpected = [...actualPaths].filter((path) => !declaredPaths.has(path)).sort();
+    const describe = (label, paths) => `${label} (${paths.length}): ${JSON.stringify(paths.slice(0, 20))}${paths.length > 20 ? " (first 20 shown)" : ""}`;
+    throw new Error([
+      "Packaged web/API resource set does not exactly match the ASAR integrity manifest",
+      `Declared files: ${declaredPaths.size}; packaged files: ${actualPaths.size}.`,
+      describe("Missing", missing),
+      describe("Unexpected", unexpected),
+    ].join("\n"));
   }
 
   for (const entry of manifest.files) {

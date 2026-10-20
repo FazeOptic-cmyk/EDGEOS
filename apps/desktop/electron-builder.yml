@@ -22,10 +22,12 @@ files:
   - dist/src/**/*
   - package.json
 extraResources:
-  - from: resources/web
-    to: web
+  # The builder excludes node_modules at a copy root. Copy web relative to its
+  # parent so the standalone server's traced dependencies are included too.
+  - from: resources
+    to: .
     filter:
-      - "**/*"
+      - "web/**/*"
   - from: resources/api
     to: api
     filter:

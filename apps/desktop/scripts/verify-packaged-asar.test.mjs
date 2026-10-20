@@ -158,6 +158,15 @@ for (const mutation of ["extra", "missing"]) {
       const result = verify(archive, resources);
       assert.equal(result.status, 1);
       assert.match(result.stderr, /resource set does not exactly match/u);
+      if (mutation === "extra") {
+        assert.match(result.stderr, /Declared files: 3; packaged files: 4/u);
+        assert.ok(result.stderr.includes('Unexpected (1): ["web/undeclared.js"]'), result.stderr);
+        assert.ok(result.stderr.includes("Missing (0): []"), result.stderr);
+      } else {
+        assert.match(result.stderr, /Declared files: 3; packaged files: 2/u);
+        assert.ok(result.stderr.includes('Missing (1): ["web/.next/static/chunks/example.js"]'), result.stderr);
+        assert.ok(result.stderr.includes("Unexpected (0): []"), result.stderr);
+      }
     });
   });
 }

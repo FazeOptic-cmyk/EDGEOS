@@ -10,7 +10,7 @@ place orders, or enable continuous ingestion.
 > build on Windows; do not infer that a distributable installer accompanies the
 > source tree.
 
-The standard build is explicitly a **demo build**. Its preloaded market and
+The standard build starts in explicitly labeled **Local demo** mode. Its preloaded market and
 analytics fixtures are deterministic and none of them are live prices or real
 account performance. Device-local paper positions, fills, settlements, ledger
 entries, watchlists, alert-rule configuration, settings, and saved opportunities
@@ -111,6 +111,10 @@ Starting EDGEOS launches one desktop process and two owned child services:
 | --- | --- | --- |
 | Next.js interface | OS-assigned `127.0.0.1` candidate port per launch | Renders the packaged application and owns the browser-visible origin |
 | FastAPI research API | Separate OS-assigned `127.0.0.1` candidate port | Runs local calculations and provider diagnostics |
+
+This service layout applies to Local demo. Hosted live opens a separately
+deployed HTTPS web application and starts neither bundled service; see
+“Hosted live connection” below.
 
 Both services bind to IPv4 loopback only; they are not intended to be reachable
 from another device. The desktop host obtains ephemeral candidate ports,
@@ -216,7 +220,7 @@ NEXT_PUBLIC_API_URL=/api/edgeos
 NEXT_PUBLIC_DESKTOP_BUILD=true
 ```
 
-The desktop host always starts the bundled API in demo mode and does not pass
+In Local demo, the desktop host starts the bundled API in demo mode and does not pass
 private provider credentials into it. Therefore, downloading the normal
 artifact requires no account or API key and does not provide a live scanner.
 The packaged runtime ignores attempts to turn it into live mode with
@@ -227,6 +231,33 @@ artifact into a live deployment. It does not launch the background ingestion
 worker, connect to a hosted live database, or receive server-held provider
 secrets; those components require separately configured hosted infrastructure.
 Its local SQLite file is only the durable device-local simulated workspace.
+
+### Hosted live connection
+
+Open **Connection → Server settings**, select **Hosted live**, and enter the
+HTTPS origin of a separately deployed EDGEOS web application. Supply the web
+origin, not the API URL, a path, or any credentials. Local/IP addresses and
+non-HTTPS schemes are rejected.
+
+The connection check calls the public same-origin
+`/api/edgeos/api/v1/health` endpoint without account cookies or the local API
+credential. It requires matching live-mode/version headers, the supported API
+identity, configured Supabase authentication, and research/paper-only operation.
+Redirects, oversized responses, and incompatible servers are rejected. This
+health check does not prove worker freshness or executable opportunities.
+
+Hosted mode starts no local API/web server and uses a separate persistent
+Electron browser session for each exact origin. Connection settings store only
+the versioned mode and origin, not provider secrets. The local simulated
+workspace remains separate. Connection failure offers retry, settings, or an
+explicit return to Local demo; there is no silent demo fallback.
+
+The hosted deployment must supply Supabase, web/BFF, API, and a supervised
+worker. Installing this desktop app does not deploy those resources. Hosted
+email/OAuth browser flows do not have native desktop deep-link session transfer.
+The connection/security contracts have 24 passing desktop unit tests; native
+Windows acceptance and a configured hosted-account session still require
+verification.
 
 ### Supabase-connected private build
 
@@ -556,10 +587,9 @@ remains device-only and simulated.
 - No secure desktop store for provider or Supabase administrative secrets.
 - No supported Google OAuth, automatic email-confirmation login, or email-link
   session transfer in Electron.
-- The standard desktop runtime is demo-only and neither bundles Postgres nor
-  configures the live durable portfolio, watchlist, alert-rule, settings, or
-  analytics repositories. Those repositories exist for a separately operated
-  hosted/live deployment; they are not enabled by this installer.
+- Local demo neither bundles Postgres nor configures the live durable
+  repositories. Hosted live can connect to a separately operated deployment;
+  the installer does not provision or supervise that deployment.
 - No real-money order placement or automated wagering.
 
 ## Production acceptance checklist

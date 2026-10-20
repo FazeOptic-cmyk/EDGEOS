@@ -197,10 +197,18 @@ recovery still depends on the operator keeping and testing backups.
 Uninstall intentionally retains `%APPDATA%\EDGEOS`; deleting that directory is a
 separate, irreversible user action.
 
-The standard installer is demo-only, contains no server secret, does not install a
-worker, and has no updater. A private Supabase-connected build may contain only
-public URL/publishable-key configuration. Signed artifacts must match the approved
-certificate thumbprint and published SHA-256 manifest.
+The standard installer starts in Local demo, contains no server secret, does not
+install a worker, and has no updater. Optional Hosted live accepts a validated
+HTTPS web origin, verifies its public live/authentication contract without
+sending local credentials, and starts no bundled services. It uses a persistent
+browser session isolated by exact origin, strict origin navigation, and a narrow
+sandboxed settings preload with sender/frame checks. Switching modes never
+silently substitutes fixtures for live data. Origin validation is not proof that
+a server is trustworthy: use only an EDGEOS deployment you control or trust.
+The health check does not attest to provider freshness or worker operation.
+A private Supabase-connected build may contain only public URL/publishable-key
+configuration. Signed artifacts must match the approved certificate thumbprint
+and published SHA-256 manifest.
 
 ## Deployment controls
 

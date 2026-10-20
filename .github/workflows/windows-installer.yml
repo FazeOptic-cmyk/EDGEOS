@@ -13,6 +13,9 @@ on:
       - "apps/web/**"
       - "scripts/build-windows-api.ps1"
       - "scripts/build-windows-installer.ps1"
+      - "scripts/build-local-windows.ps1"
+      - "scripts/windows-build-storage.ps1"
+      - "scripts/test-windows-build-storage.ps1"
       - "scripts/sign-windows-executable.ps1"
       - "scripts/stage-windows-resources.ps1"
       - "scripts/test-packaged-windows-app.ps1"
@@ -79,6 +82,10 @@ jobs:
           } finally {
             Pop-Location
           }
+
+      - name: Check local build storage isolation
+        shell: pwsh
+        run: ./scripts/test-windows-build-storage.ps1
 
       - name: Run Windows payload unit checks
         shell: pwsh

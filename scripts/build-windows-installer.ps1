@@ -6,6 +6,7 @@ param(
     [switch]$PackageOnly,
     [switch]$SkipInstalledAcceptance,
     [switch]$RequireSignature,
+    [string]$ElectronDownloadCache,
     [string]$ExpectedSignerThumbprint = $env:WINDOWS_EXPECTED_SIGNER_THUMBPRINT
 )
 
@@ -23,6 +24,9 @@ if ($PayloadOnly -and $RequireSignature) {
 }
 if ($RequireSignature -and $SkipInstalledAcceptance) {
     throw "A signature-required release cannot skip the installed NSIS acceptance test."
+}
+if ($ElectronDownloadCache -and -not [IO.Path]::IsPathFullyQualified($ElectronDownloadCache)) {
+    throw "ElectronDownloadCache must be an absolute directory path."
 }
 
 function Invoke-WithoutSensitiveBuildEnvironment {
@@ -259,7 +263,11 @@ try {
         }
         Remove-Item -LiteralPath $releaseDirectory -Recurse -Force
     }
-    & npm.cmd run dist:win --workspace=@edgeos/desktop
+    $packagingArguments = @("run", "dist:win", "--workspace=@edgeos/desktop")
+    if ($ElectronDownloadCache) {
+        $packagingArguments += @("--", "--config.electronDownload.cache=$ElectronDownloadCache")
+    }
+    & npm.cmd @packagingArguments
     if ($LASTEXITCODE -ne 0) { throw "NSIS packaging failed with exit code $LASTEXITCODE." }
 
     $verifyArguments = @{}

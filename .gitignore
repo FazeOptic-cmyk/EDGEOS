@@ -32,6 +32,7 @@ __pycache__/
 *.db
 *.sqlite*
 .cache/
+.edgeos-build-cache/
 logs/
 
 # Editors / OS

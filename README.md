@@ -327,7 +327,12 @@ a deployed, monitored worker, not for the local Windows package or an open tab.
 No paid GitHub minutes are required to build on your own x64 Windows PC.
 Download and extract this repository, install PowerShell 7, Node.js 22, and uv,
 then double-click **BUILD-EDGEOS.cmd**. It asks before downloading dependencies
-and running the complete build/automated Windows acceptance checks. The actual
+and running the complete build/automated Windows acceptance checks. If C: is
+full, save and extract a fresh ZIP directly on a spacious drive (for example
+`D:\EDGEOS`). The launcher keeps dependency caches, downloaded Python, and build
+temporary files in that folder's ignored `.edgeos-build-cache` directory, using
+process-only settings. Allow 15 GiB of headroom; the preflight refuses less than
+8 GiB. Windows itself still needs free space on its system drive. The actual
 installer is shown only after its file size/hash match the generated manifest
 and all invoked checks succeed. See the
 [local Windows walkthrough](docs/WINDOWS_INSTALLER.md#build-privately-on-your-own-windows-pc-without-actions-minutes).

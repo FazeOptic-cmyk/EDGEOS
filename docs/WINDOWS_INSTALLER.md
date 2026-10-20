@@ -32,10 +32,17 @@ The local route below uses your own computer and does not change those budgets.
 
 1. On an x64 Windows PC, sign into GitHub and download the source through
    [EDGEOS → Code → Download ZIP](https://github.com/FazeOptic-cmyk/EDGEOS).
-   Extract the **whole ZIP** into a writable folder with a short path, such as
-   `C:\EDGEOS`. Do not run the launcher from inside the compressed ZIP.
+   Save the ZIP directly on a drive with plenty of free space. For a source ZIP
+   you trust from this repository, right-click the **ZIP file** → Properties →
+   **Unblock** (if present) → Apply, before extracting. This is a per-file trust
+   decision, not a global execution-policy change. Then extract the **whole ZIP**
+   into a writable folder with a short path, such as `D:\EDGEOS` on a game drive
+   (substitute your drive letter). Do not run the launcher from inside the ZIP.
+   When recovering from a failed build on another drive, use a fresh extraction;
+   do not move an already-created Python `.venv` between paths.
    The repository stays private; do not put credentials in a download URL.
-2. Install the one-time build prerequisites from Windows Terminal:
+2. Install the one-time build prerequisites from Windows Terminal (skip this
+   step if these tools are already installed):
 
    ```powershell
    winget install --exact --id Microsoft.PowerShell --source winget
@@ -51,8 +58,10 @@ The local route below uses your own computer and does not change those budgets.
    so the updated PATH is available.
 3. Double-click **BUILD-EDGEOS.cmd** in the extracted source folder. Read its
    summary and enter `BUILD` to consent to downloading dependencies and running
-   the build and local acceptance tests. Internet and several GB of free space
-   are needed. The launcher obtains Python 3.12 through uv, runs the API/web/
+   the build and local acceptance tests. Internet and disk space are needed:
+   allow **15 GiB** of build-drive headroom; the preflight refuses less than
+   **8 GiB**. These are conservative planning values, not a measured maximum.
+   The launcher obtains Python 3.12 through uv, runs the API/web/
    desktop checks, and invokes the existing Windows packager. It runs PowerShell
    with process-scoped `RemoteSigned`, not a persistent policy change; enforced
    organization policies still take precedence. If downloaded scripts are
@@ -75,6 +84,43 @@ The launcher records output in `logs\windows-build-*.log`. On failure it reports
 failure and does not call an intermediate installer acceptance-tested. Share the
 final error or a reviewed/redacted log for diagnosis. No installer has been
 verified on your computer until the build actually completes there.
+
+### If C: ran out of space during dependency installation
+
+`npm ... ENOSPC: no space left on device` means storage was exhausted; preceding
+deprecation warnings are not this failure. Use the **updated launcher in a fresh
+source extraction on the spacious drive**, not the old copy in Downloads.
+It displays the selected build drive/free space before confirmation and uses
+`<source>\.edgeos-build-cache` for:
+
+- npm package downloads; Electron installation downloads and the separate
+  electron-builder packaging/download cache;
+- uv dependency downloads, its managed Python installation and Python executable
+  links; PyInstaller configuration/cache; Next's fallback SWC downloads;
+- `TEMP`, `TMP`, and `RUNNER_TEMP`, including the isolated acceptance installation.
+
+The settings are process-local and restored on normal completion or caught
+failure. No machine/user environment variables are changed, and no existing
+Downloads folder, game, system cache, or previous build is deleted or moved.
+The cache is ignored by Git and is reusable by subsequent builds in that same
+folder. Dependencies, web/API build outputs, and the final installer also stay
+under the source folder. Keep the drive connected throughout the build.
+
+This is not a guarantee of zero C: writes: Windows, antivirus, already-installed
+tools, Start Menu/Desktop shortcut acceptance checks, and normal app data can
+still use the system drive. Leave space there for normal Windows operation.
+When installing the finished app for daily use, the assisted installer lets you
+choose its application folder; normal per-user settings remain in AppData.
+
+Storage-routing regression checks can run without downloading dependencies:
+
+```powershell
+pwsh -NoProfile -File .\scripts\test-windows-build-storage.ps1
+```
+
+These checks validate cache mapping and restoration, not a completed native
+Windows build or installation. Only the full Windows acceptance run establishes
+the latter.
 
 Without a signing certificate the generated file is **unsigned development
 output**, not an authenticated-publisher production release. Normal installation

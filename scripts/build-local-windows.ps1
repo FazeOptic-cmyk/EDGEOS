@@ -14,10 +14,20 @@ if ([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture -ne
 }
 
 $repositoryRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot ".."))
-foreach ($requiredFile in @("package-lock.json", "apps/api/uv.lock", "scripts/build-windows-installer.ps1")) {
+foreach ($requiredFile in @("package-lock.json", "apps/api/uv.lock", "scripts/build-windows-installer.ps1", "scripts/windows-build-storage.ps1")) {
     if (-not (Test-Path -LiteralPath (Join-Path $repositoryRoot $requiredFile) -PathType Leaf)) {
         throw "Extract the entire EDGEOS source ZIP before running this launcher. Missing: $requiredFile"
     }
+}
+. (Join-Path $PSScriptRoot "windows-build-storage.ps1")
+$buildStorage = Get-EdgeosBuildStorageEnvironment -RepositoryRoot $repositoryRoot
+$buildDrive = [IO.DriveInfo]::new([IO.Path]::GetPathRoot($repositoryRoot))
+if (-not $buildDrive.IsReady) { throw "The drive containing the extracted source is not ready." }
+$freeGiB = [math]::Round($buildDrive.AvailableFreeSpace / 1GB, 1)
+# A conservative preflight guard, not a measured maximum build size. Actual
+# requirements vary with dependencies and existing caches; retain extra headroom.
+if ($buildDrive.AvailableFreeSpace -lt 8GB) {
+    throw "Only $freeGiB GiB free on $($buildDrive.Name). Extract a fresh source ZIP on a drive with at least 8 GiB free (15 GiB recommended). Existing files were not deleted."
 }
 
 $missing = @("node.exe", "npm.cmd", "uv.exe") | Where-Object {
@@ -58,7 +68,11 @@ Write-Host "Internet is required to download locked dependencies, Python 3.12, E
 Write-Host "It will run tests, build the app, briefly install/launch/uninstall it for acceptance, and keep the installer."
 Write-Host "It does not deploy live services, place trades, change billing, or register a background build runner."
 Write-Host "Without your own signing certificate, the installer will be unsigned development output."
-Write-Host "Run from a writable extracted source folder with several GB of free space."
+Write-Host "Build folder: $repositoryRoot"
+Write-Host "Build drive: $($buildDrive.Name) ($freeGiB GiB free; 15 GiB recommended)"
+Write-Host "Downloads and temporary files: $(Join-Path $repositoryRoot '.edgeos-build-cache')"
+Write-Host "These locations apply only to this build process; existing caches are not moved or deleted."
+Write-Host "Keep some free space on the Windows system drive for Windows and installed tools."
 Write-Host ""
 if ((Read-Host "Type BUILD to continue, or press Enter to cancel") -cne "BUILD") {
     Write-Host "Canceled. No dependencies installed or build started."
@@ -86,22 +100,28 @@ Push-Location $repositoryRoot
 try {
     Start-Transcript -LiteralPath $logPath | Out-Null
     $transcriptStarted = $true
-    Invoke-CheckedNative "npm.cmd" @("ci", "--no-audit", "--no-fund")
-    Invoke-CheckedNative "uv.exe" @("python", "install", "3.12")
-    Push-Location (Join-Path $repositoryRoot "apps/api")
-    try {
-        Invoke-CheckedNative "uv.exe" @("sync", "--all-groups", "--locked")
-        Invoke-CheckedNative "uv.exe" @("run", "--locked", "ruff", "check", ".")
-        Invoke-CheckedNative "uv.exe" @("run", "--locked", "mypy", "edgeos")
-        Invoke-CheckedNative "uv.exe" @("run", "--locked", "pytest")
-    } finally {
-        Pop-Location
+    Invoke-WithEdgeosBuildStorage -RepositoryRoot $repositoryRoot -Action {
+        Write-Host "Build download/cache/temp directories are on $($buildDrive.Name)."
+        Invoke-CheckedNative "npm.cmd" @("ci", "--no-audit", "--no-fund")
+        Invoke-CheckedNative "uv.exe" @("python", "install", "3.12")
+        Push-Location (Join-Path $repositoryRoot "apps/api")
+        try {
+            Invoke-CheckedNative "uv.exe" @("sync", "--all-groups", "--locked")
+            Invoke-CheckedNative "uv.exe" @("run", "--locked", "ruff", "check", ".")
+            Invoke-CheckedNative "uv.exe" @("run", "--locked", "mypy", "edgeos")
+            Invoke-CheckedNative "uv.exe" @("run", "--locked", "pytest")
+        } finally {
+            Pop-Location
+        }
+        foreach ($check in @("lint", "typecheck", "test")) {
+            Invoke-CheckedNative "npm.cmd" @("run", $check, "--workspace=@edgeos/web")
+        }
+        # The builder's own Electron ZIP download needs explicit config in
+        # addition to electron_config_cache and ELECTRON_BUILDER_CACHE.
+        & (Join-Path $PSScriptRoot "build-windows-installer.ps1") -SkipDependencyInstall `
+            -ElectronDownloadCache $buildStorage["electron_config_cache"]
+        if ($LASTEXITCODE -ne 0) { throw "Windows packaging or acceptance failed." }
     }
-    foreach ($check in @("lint", "typecheck", "test")) {
-        Invoke-CheckedNative "npm.cmd" @("run", $check, "--workspace=@edgeos/web")
-    }
-    & (Join-Path $PSScriptRoot "build-windows-installer.ps1") -SkipDependencyInstall
-    if ($LASTEXITCODE -ne 0) { throw "Windows packaging or acceptance failed." }
 
     $outputDirectory = Join-Path $repositoryRoot "artifacts/windows"
     $manifestPath = Join-Path $outputDirectory "windows-build-manifest.json"

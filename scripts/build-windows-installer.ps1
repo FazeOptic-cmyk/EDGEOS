@@ -169,7 +169,7 @@ try {
 
         Push-Location (Join-Path $repositoryRoot "apps/api")
         try {
-            & uv sync --all-groups --locked
+            & uv sync --all-groups --locked --no-editable
             if ($LASTEXITCODE -ne 0) { throw "uv sync failed with exit code $LASTEXITCODE." }
         } finally {
             Pop-Location

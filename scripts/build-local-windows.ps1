@@ -65,6 +65,8 @@ Write-Host ""
 Write-Host "EDGEOS local Windows build"
 Write-Host "This uses your computer, not paid GitHub Actions minutes."
 Write-Host "Internet is required to download locked dependencies, Python 3.12, Electron, and packaging tools."
+Write-Host "Python is installed as a regular package for packaging, not an editable development install."
+Write-Host "If a package host remains unreachable, stop and review the network error; security checks stay enabled."
 Write-Host "It will run tests, build the app, briefly install/launch/uninstall it for acceptance, and keep the installer."
 Write-Host "It does not deploy live services, place trades, change billing, or register a background build runner."
 Write-Host "Without your own signing certificate, the installer will be unsigned development output."
@@ -116,10 +118,10 @@ try {
         Invoke-CheckedNative "uv.exe" @("python", "install", "3.12")
         Push-Location (Join-Path $repositoryRoot "apps/api")
         try {
-            Invoke-CheckedNative "uv.exe" @("sync", "--all-groups", "--locked")
-            Invoke-CheckedNative "uv.exe" @("run", "--locked", "ruff", "check", ".")
-            Invoke-CheckedNative "uv.exe" @("run", "--locked", "mypy", "edgeos")
-            Invoke-CheckedNative "uv.exe" @("run", "--locked", "pytest")
+            Invoke-CheckedNative "uv.exe" @("sync", "--all-groups", "--locked", "--no-editable")
+            Invoke-CheckedNative "uv.exe" @("run", "--locked", "--no-editable", "ruff", "check", ".")
+            Invoke-CheckedNative "uv.exe" @("run", "--locked", "--no-editable", "mypy", "edgeos")
+            Invoke-CheckedNative "uv.exe" @("run", "--locked", "--no-editable", "pytest")
         } finally {
             Pop-Location
         }

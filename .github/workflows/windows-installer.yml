@@ -14,6 +14,7 @@ on:
       - "scripts/build-windows-api.ps1"
       - "scripts/build-windows-installer.ps1"
       - "scripts/build-local-windows.ps1"
+      - "BUILD-EDGEOS.cmd"
       - "scripts/windows-build-storage.ps1"
       - "scripts/test-windows-build-storage.ps1"
       - "scripts/windows-nsis-arguments.ps1"
@@ -48,6 +49,9 @@ jobs:
       NEXT_PUBLIC_APP_MODE: demo
       NEXT_PUBLIC_API_URL: /api/edgeos
       NEXT_PUBLIC_DESKTOP_BUILD: "true"
+      UV_HTTP_TIMEOUT: "120"
+      UV_HTTP_RETRIES: "3"
+      UV_CONCURRENT_DOWNLOADS: "4"
     steps:
       - name: Check out source
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -81,7 +85,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw "npm ci failed." }
           Push-Location apps/api
           try {
-            uv sync --all-groups --locked
+            uv sync --all-groups --locked --no-editable
             if ($LASTEXITCODE -ne 0) { throw "uv sync failed." }
           } finally {
             Pop-Location
@@ -106,11 +110,11 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw "Web unit tests failed." }
           Push-Location apps/api
           try {
-            uv run --locked ruff check .
+            uv run --locked --no-editable ruff check .
             if ($LASTEXITCODE -ne 0) { throw "API lint failed." }
-            uv run --locked mypy edgeos
+            uv run --locked --no-editable mypy edgeos
             if ($LASTEXITCODE -ne 0) { throw "API typecheck failed." }
-            uv run --locked pytest
+            uv run --locked --no-editable pytest
             if ($LASTEXITCODE -ne 0) { throw "API tests failed." }
           } finally {
             Pop-Location

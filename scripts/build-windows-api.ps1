@@ -19,13 +19,13 @@ if (-not (Get-Command uv -ErrorAction SilentlyContinue)) {
 Push-Location $ApiRoot
 try {
     if (-not $SkipDependencyInstall) {
-        uv sync --all-groups --locked
+        uv sync --all-groups --locked --no-editable
         if ($LASTEXITCODE -ne 0) {
             throw "uv sync failed with exit code $LASTEXITCODE"
         }
     }
 
-    uv run --locked pyinstaller --clean --noconfirm edgeos-api.spec
+    uv run --locked --no-editable pyinstaller --clean --noconfirm edgeos-api.spec
     if ($LASTEXITCODE -ne 0) {
         throw "PyInstaller failed with exit code $LASTEXITCODE"
     }

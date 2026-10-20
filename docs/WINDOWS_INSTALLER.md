@@ -161,6 +161,46 @@ These checks validate cache mapping and restoration, not a completed native
 Windows build or installation. Only the full Windows acceptance run establishes
 the latter.
 
+### Python package download timeout (`files.pythonhosted.org`)
+
+An error ending in `Request failed after 3 retries` and `operation timed out`
+is a network/download failure, even if uv prefixes it with `No solution found`.
+It does not by itself establish a conflicting package requirement. Keep the
+existing extracted source folder and its download cache; do not clear the cache
+or turn off TLS verification, antivirus, or organization security controls.
+
+Windows packaging now uses `uv sync/run --no-editable` consistently. The API is
+still installed, including the distribution metadata required by PyInstaller;
+it simply does not request Hatchling's development-only `editables` helper.
+Ordinary development commands are unchanged. `--locked` checks `uv.lock`, but
+does not independently lock every isolated build-backend dependency. This fix
+does not repin or upgrade any runtime dependency.
+
+`BUILD-EDGEOS.cmd` supplies process-local defaults of `UV_HTTP_TIMEOUT=120`
+seconds, `UV_HTTP_RETRIES=3`, and `UV_CONCURRENT_DOWNLOADS=4`, while preserving
+explicit operator settings. There is no unbounded outer retry loop. The Windows
+workflow uses the same defaults; direct PowerShell invocations can inherit them
+from their parent terminal. These settings improve tolerance of slow connections
+but cannot make a blocked or unavailable package host reachable.
+
+To recover with the already-extracted `7c59539` source, open PowerShell in the
+folder containing `BUILD-EDGEOS.cmd` and run:
+
+```powershell
+$env:UV_NO_EDITABLE = "true"
+$env:UV_HTTP_TIMEOUT = "120"
+$env:UV_HTTP_RETRIES = "3"
+$env:UV_CONCURRENT_DOWNLOADS = "4"
+.\BUILD-EDGEOS.cmd
+```
+
+These variables affect that terminal and its child processes only. No new ZIP,
+tool reinstall, cache deletion, or change to the Windows execution policy is
+required for this recovery. If another official package download times out,
+retain its exact hostname and error for network diagnosis rather than repeatedly
+restarting the build. A successful download from a cloud verification host is
+not evidence that the user's PC has the same network access.
+
 Without a signing certificate the generated file is **unsigned development
 output**, not an authenticated-publisher production release. Normal installation
 does not require Node/Python on the destination PC: the payload includes its

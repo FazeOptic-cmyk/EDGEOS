@@ -1,5 +1,10 @@
 @echo off
 setlocal
+rem Apply only to this build process. Keep explicit operator settings intact.
+rem Slower connections get more time, with bounded retries and fewer downloads.
+if not defined UV_HTTP_TIMEOUT set "UV_HTTP_TIMEOUT=120"
+if not defined UV_HTTP_RETRIES set "UV_HTTP_RETRIES=3"
+if not defined UV_CONCURRENT_DOWNLOADS set "UV_CONCURRENT_DOWNLOADS=4"
 title EDGEOS Windows installer builder
 cd /d "%~dp0"
 where pwsh.exe >nul 2>&1

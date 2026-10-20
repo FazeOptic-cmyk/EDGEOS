@@ -85,6 +85,45 @@ failure and does not call an intermediate installer acceptance-tested. Share the
 final error or a reviewed/redacted log for diagnosis. No installer has been
 verified on your computer until the build actually completes there.
 
+The launcher runs web tests with two isolated workers before Python checks and
+native packaging. It writes a unique `logs\windows-build-*.web-tests.json` report.
+If web tests fail, it repeats the failing test names and first error lines at the
+bottom and saves a matching `.failure.txt` summary. A failed test is never
+silently skipped. Send that summary or the corresponding reviewed log, rather
+than repeatedly rerunning the same source version. The same reporter is used by
+the Windows workflow, which retains diagnostics on failure.
+
+To check just the web stage after dependencies are installed, from the extracted
+repository run `node scripts/run-web-tests.mjs`. This does not build an installer
+or claim that native acceptance succeeded.
+
+The 2026-10-20 compatibility repair reproduced `object.stream is not a function`
+in the backup test on Node **22.23.3**: a jsdom Blob was being passed to Node's
+native Response. The repaired fixture supplies HTTP response bytes and verifies
+the actual exported Blob's type/content and the unchanged restore contract.
+Separate repairs wait for completed query/UI state instead of merely observing
+that a request started, and isolate tests for intentionally missing settings
+from inherited machine configuration. No assertions were removed.
+The full web suite passes **134 tests** on both Node 22.23.3 and 24.19.0; desktop
+unit tests pass **28 tests** on both versions. These are Linux-host checks, not a
+claim that the Windows `.exe` has been produced or installed.
+The desktop-mode standalone production web build also completed on Node
+22.23.3. A real local HTTP navigation/restart smoke was not run because its
+network permission request was not completed; cache immutability was verified
+through the actual Next cache implementation in the regression test instead.
+
+The same repair keeps packaged Next route-cache writes in memory so navigation
+does not invalidate the signed resource inventory on restart, and passes NSIS's
+final `/D=` destination without quoting (as NSIS requires), including directories
+with spaces. Storage/NSIS helpers have **33 passing PowerShell regression cases**.
+
+When updating an existing extraction **without changing its path**, unblock and
+extract the new source ZIP separately, then copy its source-folder contents over
+the existing folder containing `BUILD-EDGEOS.cmd`, accepting matching source-file
+replacements. Keep existing `.venv`, `.edgeos-build-cache`, and logs in place;
+the source ZIP does not contain them. This reuses download caches while the
+launcher still installs locked dependencies and runs every acceptance gate.
+
 ### If C: ran out of space during dependency installation
 
 `npm ... ENOSPC: no space left on device` means storage was exhausted; preceding

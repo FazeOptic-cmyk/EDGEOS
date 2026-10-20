@@ -19,6 +19,7 @@ if ($RemovalTimeoutSeconds -lt 5 -or $RemovalTimeoutSeconds -gt 120) {
 }
 
 $repositoryRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot ".."))
+. (Join-Path $PSScriptRoot "windows-nsis-arguments.ps1")
 if ([string]::IsNullOrWhiteSpace($ReleaseDirectory)) {
     $ReleaseDirectory = Join-Path $repositoryRoot "apps/desktop/release"
 }
@@ -93,9 +94,11 @@ function Get-EdgeosInstallRegistrations {
 }
 
 function Invoke-AcceptanceProcess {
+    [CmdletBinding(DefaultParameterSetName = "ArgumentList")]
     param(
         [Parameter(Mandatory = $true)] [string]$Executable,
-        [Parameter(Mandatory = $true)] [string[]]$ArgumentList,
+        [Parameter(Mandatory = $true, ParameterSetName = "ArgumentList")] [string[]]$ArgumentList,
+        [Parameter(Mandatory = $true, ParameterSetName = "RawArguments")] [string]$RawArguments,
         [Parameter(Mandatory = $true)] [string]$Description
     )
     if (-not (Test-Path -LiteralPath $Executable -PathType Leaf)) {
@@ -105,8 +108,12 @@ function Invoke-AcceptanceProcess {
     $startInfo.FileName = $Executable
     $startInfo.UseShellExecute = $false
     $startInfo.CreateNoWindow = $true
-    foreach ($argument in $ArgumentList) {
-        [void]$startInfo.ArgumentList.Add($argument)
+    if ($PSCmdlet.ParameterSetName -eq "RawArguments") {
+        $startInfo.Arguments = $RawArguments
+    } else {
+        foreach ($argument in $ArgumentList) {
+            [void]$startInfo.ArgumentList.Add($argument)
+        }
     }
     $process = [System.Diagnostics.Process]::Start($startInfo)
     if ($null -eq $process) {
@@ -213,7 +220,7 @@ function Assert-InstalledPayload {
 function Invoke-SilentInstall {
     Invoke-AcceptanceProcess `
         -Executable $installer.FullName `
-        -ArgumentList @("/S", "/D=$installDirectory") `
+        -RawArguments (Get-EdgeosNsisInstallArguments -InstallDirectory $installDirectory) `
         -Description "EDGEOS NSIS installer"
 }
 

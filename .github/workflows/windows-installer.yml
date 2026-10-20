@@ -16,6 +16,10 @@ on:
       - "scripts/build-local-windows.ps1"
       - "scripts/windows-build-storage.ps1"
       - "scripts/test-windows-build-storage.ps1"
+      - "scripts/windows-nsis-arguments.ps1"
+      - "scripts/test-windows-nsis-arguments.ps1"
+      - "scripts/run-web-tests.mjs"
+      - "scripts/run-web-tests.test.mjs"
       - "scripts/sign-windows-executable.ps1"
       - "scripts/stage-windows-resources.ps1"
       - "scripts/test-packaged-windows-app.ps1"
@@ -85,7 +89,11 @@ jobs:
 
       - name: Check local build storage isolation
         shell: pwsh
-        run: ./scripts/test-windows-build-storage.ps1
+        run: |
+          ./scripts/test-windows-build-storage.ps1
+          ./scripts/test-windows-nsis-arguments.ps1
+          node scripts/run-web-tests.test.mjs
+          if ($LASTEXITCODE -ne 0) { throw "Web test failure-reporting regression failed." }
 
       - name: Run Windows payload unit checks
         shell: pwsh
@@ -94,7 +102,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw "Web lint failed." }
           npm run typecheck --workspace=@edgeos/web
           if ($LASTEXITCODE -ne 0) { throw "Web typecheck failed." }
-          npm run test --workspace=@edgeos/web
+          node scripts/run-web-tests.mjs
           if ($LASTEXITCODE -ne 0) { throw "Web unit tests failed." }
           Push-Location apps/api
           try {
@@ -213,6 +221,15 @@ jobs:
           $files = @(Get-ChildItem artifacts/windows -File)
           if ($files.Count -lt 3) { throw "Expected installer, build manifest, and checksums." }
           $files | Select-Object Name, Length | Format-Table -AutoSize
+
+      - name: Upload web test diagnostics
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: edgeos-web-test-diagnostics-${{ github.run_number }}-${{ github.run_attempt }}
+          path: logs/web-tests-*
+          if-no-files-found: ignore
+          retention-days: 7
 
       - name: Upload Windows installer
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4

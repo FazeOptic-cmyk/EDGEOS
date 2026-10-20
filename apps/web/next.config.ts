@@ -12,6 +12,9 @@ const nextConfig: NextConfig = {
   // production builds. `npm run typecheck` still runs project-local `tsc`.
   experimental: {
     useTypeScriptCli: false,
+    // Packaged web files are covered by the desktop integrity manifest. Keep
+    // route-cache promotions in memory so navigation cannot change that tree.
+    ...(process.env.NEXT_PUBLIC_DESKTOP_BUILD === "true" ? { isrFlushToDisk: false } : {}),
   },
   async headers() {
     return [{ source: "/:path*", headers: productionSecurityHeaders() }];

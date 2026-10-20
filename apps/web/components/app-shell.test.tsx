@@ -82,9 +82,9 @@ describe("desktop application shell", () => {
 
     expect((await screen.findAllByText("1 provider live")).length).toBeGreaterThan(0);
     expect(screen.getAllByText("Last refresh Oct 20, 10:30 AM UTC").length).toBeGreaterThan(0);
+    expect(await screen.findByRole("link", { name: "1 unread notification" })).toBeInTheDocument();
     const alertsLink = screen.getByRole("link", { name: /^Alerts/ });
     expect(within(alertsLink).getByText("1")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "1 unread notification" })).toBeInTheDocument();
   });
 
   it("does not invent a notification badge when the API returns no events", async () => {
@@ -97,7 +97,8 @@ describe("desktop application shell", () => {
 
   it("submits global search, focuses it by keyboard, and refreshes active queries", async () => {
     renderShell();
-    await waitFor(() => expect(mocks.getProviderHealth).toHaveBeenCalledTimes(1));
+    await screen.findAllByText("1 provider live");
+    expect(mocks.getProviderHealth).toHaveBeenCalledTimes(1);
     const search = screen.getByRole("searchbox", { name: "Search EDGEOS" });
 
     fireEvent.keyDown(window, { key: "/" });

@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   assertEdgeosMode,
   buildEdgeosProxyUrl,
@@ -11,6 +11,8 @@ import {
 } from "./edgeos-proxy";
 
 describe("EDGEOS same-origin API proxy", () => {
+  afterEach(() => vi.unstubAllEnvs());
+
   it("constructs only normalized API v1 upstream URLs", () => {
     const result = buildEdgeosProxyUrl(
       ["api", "v1", "opportunities", "demo id"],
@@ -32,6 +34,7 @@ describe("EDGEOS same-origin API proxy", () => {
   });
 
   it("fails closed when the internal origin is absent or malformed", () => {
+    vi.stubEnv("EDGEOS_INTERNAL_API_ORIGIN", undefined);
     expect(() => buildEdgeosProxyUrl(["api", "v1", "health"], "", undefined))
       .toThrow(EdgeosProxyConfigurationError);
     expect(() => buildEdgeosProxyUrl(["api", "v1", "health"], "", "file:///tmp/api"))
@@ -84,6 +87,7 @@ describe("EDGEOS same-origin API proxy", () => {
   });
 
   it("keeps the per-launch desktop API token server-side and fails closed", () => {
+    vi.stubEnv("EDGEOS_DESKTOP_API_TOKEN", undefined);
     const token = "t".repeat(43);
     expect(configuredDesktopApiToken(true, token)).toBe(token);
     expect(configuredDesktopApiToken(false, undefined)).toBeNull();

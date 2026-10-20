@@ -14,7 +14,7 @@ if ([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture -ne
 }
 
 $repositoryRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot ".."))
-foreach ($requiredFile in @("package-lock.json", "apps/api/uv.lock", "scripts/build-windows-installer.ps1", "scripts/windows-build-storage.ps1")) {
+foreach ($requiredFile in @("package-lock.json", "apps/api/uv.lock", "scripts/build-windows-installer.ps1", "scripts/windows-build-storage.ps1", "scripts/run-web-tests.mjs")) {
     if (-not (Test-Path -LiteralPath (Join-Path $repositoryRoot $requiredFile) -PathType Leaf)) {
         throw "Extract the entire EDGEOS source ZIP before running this launcher. Missing: $requiredFile"
     }
@@ -94,6 +94,7 @@ $logDirectory = Join-Path $repositoryRoot "logs"
 New-Item -ItemType Directory -Path $logDirectory -Force | Out-Null
 $logName = "windows-build-$([DateTime]::UtcNow.ToString('yyyyMMdd-HHmmss'))-$([Guid]::NewGuid().ToString('N')).log"
 $logPath = Join-Path $logDirectory $logName
+$webTestReportPath = [IO.Path]::ChangeExtension($logPath, "web-tests.json")
 $transcriptStarted = $false
 $buildSucceeded = $false
 Push-Location $repositoryRoot
@@ -103,6 +104,15 @@ try {
     Invoke-WithEdgeosBuildStorage -RepositoryRoot $repositoryRoot -Action {
         Write-Host "Build download/cache/temp directories are on $($buildDrive.Name)."
         Invoke-CheckedNative "npm.cmd" @("ci", "--no-audit", "--no-fund")
+        # Diagnose the previously failing web stage before the Python checks and
+        # expensive native packaging. This does not skip any later validation.
+        Invoke-CheckedNative "node.exe" @((Join-Path $PSScriptRoot "run-web-tests.mjs"), $webTestReportPath)
+        if (-not (Test-Path -LiteralPath $webTestReportPath -PathType Leaf)) {
+            throw "Web tests returned without their required verification report."
+        }
+        foreach ($check in @("lint", "typecheck")) {
+            Invoke-CheckedNative "npm.cmd" @("run", $check, "--workspace=@edgeos/web")
+        }
         Invoke-CheckedNative "uv.exe" @("python", "install", "3.12")
         Push-Location (Join-Path $repositoryRoot "apps/api")
         try {
@@ -112,9 +122,6 @@ try {
             Invoke-CheckedNative "uv.exe" @("run", "--locked", "pytest")
         } finally {
             Pop-Location
-        }
-        foreach ($check in @("lint", "typecheck", "test")) {
-            Invoke-CheckedNative "npm.cmd" @("run", $check, "--workspace=@edgeos/web")
         }
         # The builder's own Electron ZIP download needs explicit config in
         # addition to electron_config_cache and ELECTRON_BUILDER_CACHE.
@@ -154,6 +161,10 @@ try {
     Write-Host ""
     Write-Host "BUILD FAILED: $($_.Exception.Message)" -ForegroundColor Red
     Write-Host "Do not treat any intermediate installer as acceptance-tested."
+    $failureSummaryPath = "$webTestReportPath.failure.txt"
+    if (Test-Path -LiteralPath $failureSummaryPath -PathType Leaf) {
+        Write-Host (Get-Content -LiteralPath $failureSummaryPath -Raw)
+    }
 } finally {
     if ($transcriptStarted) { Stop-Transcript | Out-Null }
     Pop-Location

@@ -97,8 +97,10 @@ describe("Edge Lab authoritative simulator", () => {
       expect.objectContaining({ outcomeId: "no", format: "contract", price: "0.50" }),
     ]));
 
+    const balance = screen.getByRole("button", { name: /auto balance stakes/i });
+    await waitFor(() => expect(balance).toBeEnabled());
     simulateManualMock.mockClear();
-    fireEvent.click(screen.getByRole("button", { name: /auto balance stakes/i }));
+    fireEvent.click(balance);
     await waitFor(() => expect(simulateManualMock).toHaveBeenCalledTimes(1));
   });
 });

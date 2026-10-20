@@ -102,9 +102,8 @@ describe("private workflow API contract", () => {
   });
 
   it("exports and restores only the versioned local workspace backup type", async () => {
-    const backup = new Blob(["portable-backup"], {
-      type: "application/vnd.edgeos.workspace-backup+json",
-    });
+    // Native Response cannot consume jsdom's Blob on every supported Node version.
+    const backup = "portable-backup";
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(new Response(backup, {
         status: 200,
@@ -129,6 +128,8 @@ describe("private workflow API contract", () => {
     } = await import("./workflow-api");
 
     const exported = await exportLocalWorkspaceBackup();
+    expect(exported.type).toBe(LOCAL_WORKSPACE_BACKUP_MEDIA_TYPE);
+    await expect(exported.text()).resolves.toBe(backup);
     await restoreLocalWorkspaceBackup(exported);
     expect(fetchMock.mock.calls[0][0]).toBe("/api/edgeos/api/v1/local-workspace/backup");
     const [restoreUrl, restoreInit] = fetchMock.mock.calls[1] as [string, RequestInit];

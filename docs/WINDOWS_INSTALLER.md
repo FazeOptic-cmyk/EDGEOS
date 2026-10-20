@@ -124,6 +124,42 @@ replacements. Keep existing `.venv`, `.edgeos-build-cache`, and logs in place;
 the source ZIP does not contain them. This reuses download caches while the
 launcher still installs locked dependencies and runs every acceptance gate.
 
+### If packaging says Electron exposes 9 fuse states but verifies 8
+
+This is an EDGEOS packaging-policy mismatch, not a missing prerequisite. The
+2026-10-20 repair was reproduced against the official Electron 44.8.0 Windows
+x64 archive (SHA-256
+`1c9319bab793492715f7668e0be0e6a30bf2a8577275e40035bd33601bf6f573`).
+The updated verifier checks the ninth `WasmTrapHandlers` state explicitly. The
+repair also disables selection of the optional browser-specific V8 snapshot
+that the stock archive does not contain. The generated installer must therefore
+be **repackaged**, not merely passed through a relaxed checker.
+
+For an existing affected `7c59539` or `ec0c660` extraction that reached this
+failure, download just `scripts/repair-windows-fuses.ps1` from this repository,
+save it in the existing source root, and review it. From PowerShell in that
+folder, unblock that trusted downloaded file if necessary, then run:
+
+```powershell
+pwsh -NoProfile -ExecutionPolicy RemoteSigned -File .\repair-windows-fuses.ps1
+```
+
+Enter `REPAIR` at the prompt. The helper accepts only the known affected source
+or its own already-repaired files; it refuses unknown edits. It backs up both
+files under `logs/electron-fuse-repair-*`, retains the dependency caches and
+staged web/API builds, and runs `-PackageOnly` with source-drive caches. That
+replaces generated release/artifact output and retains the existing signature,
+resource-integrity, fuse, isolated launch, and installed NSIS acceptance gates.
+It refuses to remove an existing EDGEOS installation. Do not run the intermediate
+installer yourself while acceptance is pending. Success is explicitly reported
+as `REPAIR, REPACKAGING, AND AUTOMATED WINDOWS ACCEPTANCE PASSED`.
+
+The corrected fuse policy passed against the actual Windows executable after
+the locked builder applied its settings. All 17 fuse regression tests and 28
+desktop tests pass on Node 22.23.3 in Linux. This is binary inspection and test
+evidence, **not** a Windows launch/install result; native acceptance must still
+finish on the Windows build host.
+
 ### If C: ran out of space during dependency installation
 
 `npm ... ENOSPC: no space left on device` means storage was exhausted; preceding
@@ -352,6 +388,17 @@ encrypt Chromium cookies with Windows cryptography. Before launching either
 child, the host verifies every staged web/API file against a SHA-256 manifest
 embedded in the packaged ASAR. Electron's embedded-ASAR integrity fuse and the
 signed executable protect that manifest in a signed release.
+
+The verifier checks all **nine** fuse states in the pinned Electron 44.8.0
+binary, including `WasmTrapHandlers` (wire index 8). The locked builder and
+`@electron/fuses` 1.8.0 write only the original eight options; the ninth keeps
+Electron's enabled default and is explicitly checked, not ignored. Unknown,
+missing, or altered fuse states still fail verification. The optional
+browser-process-specific snapshot fuse stays disabled: the stock Windows
+archive supplies `v8_context_snapshot.bin`, not
+`browser_v8_context_snapshot.bin`. Enabling the optional fuse without that
+file prevents startup. The other ASAR, sandbox, and privilege controls remain
+in place.
 
 ### Device-local data and offline behavior
 

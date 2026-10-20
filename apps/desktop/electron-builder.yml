@@ -9,8 +9,12 @@ electronFuses:
   enableNodeCliInspectArguments: false
   enableEmbeddedAsarIntegrityValidation: true
   onlyLoadAppFromAsar: true
-  loadBrowserProcessSpecificV8Snapshot: true
+  # The stock Electron archive has v8_context_snapshot.bin, not the optional
+  # browser_v8_context_snapshot.bin. Selecting the latter prevents startup.
+  loadBrowserProcessSpecificV8Snapshot: false
   grantFileProtocolExtraPrivileges: false
+# The locked builder/fuses writer knows eight options. Electron 44.8.0's ninth,
+# WasmTrapHandlers, retains its enabled upstream default and is verified too.
 directories:
   output: release
   buildResources: build

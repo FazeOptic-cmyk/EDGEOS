@@ -1,0 +1,26 @@
+{
+  "name": "edgeos",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Sports-market arbitrage research and paper-trading platform",
+  "workspaces": [
+    "apps/web",
+    "apps/desktop"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace=@edgeos/web",
+    "build": "npm run build --workspace=@edgeos/web",
+    "lint": "npm run lint --workspace=@edgeos/web",
+    "typecheck": "npm run typecheck --workspace=@edgeos/web",
+    "test": "npm run test --workspace=@edgeos/web",
+    "test:e2e": "npm run test:e2e --workspace=@edgeos/web",
+    "desktop:build": "npm run build --workspace=@edgeos/desktop",
+    "desktop:test": "npm run test --workspace=@edgeos/desktop",
+    "desktop:dist:win": "npm run dist:win --workspace=@edgeos/desktop"
+  },
+  "engines": {
+    "node": ">=22.0.0",
+    "npm": ">=10.0.0"
+  }
+}
+

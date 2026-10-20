@@ -1,0 +1,3 @@
+-- Intentionally empty. EDGEOS never seeds fabricated production data.
+-- Optional, explicitly-labelled demonstration fixtures live in
+-- tests/demo_seed.sql and must be loaded manually for demo mode only.

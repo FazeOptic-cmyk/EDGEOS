@@ -1,0 +1,78 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: edgeos
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - edgeos-postgres:/var/lib/postgresql/data
+      # Vanilla Postgres needs this clearly test-only Supabase Auth shim. Hosted
+      # Supabase projects must apply only the production migration below.
+      - ./supabase/tests/local_auth_prelude.sql:/docker-entrypoint-initdb.d/00-local-auth-prelude.sql:ro
+      - ./supabase/migrations/20261016180000_initial_edgeos_schema.sql:/docker-entrypoint-initdb.d/10-edgeos-schema.sql:ro
+      - ./supabase/migrations/20261020010000_secure_provider_connections_and_worker_leases.sql:/docker-entrypoint-initdb.d/20-secure-provider-connections.sql:ro
+      - ./supabase/migrations/20261020020000_live_pipeline_alert_lifecycle.sql:/docker-entrypoint-initdb.d/30-live-pipeline-alert-lifecycle.sql:ro
+      - ./supabase/migrations/20261020030000_explicit_inapplicable_settlement_rules.sql:/docker-entrypoint-initdb.d/40-explicit-settlement-rules.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d edgeos"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: ./apps/api
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/edgeos
+      DATABASE_SSLMODE: disable
+      WEB_ORIGIN: http://localhost:3000
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  worker:
+    build:
+      context: ./apps/api
+    command: ["/app/.venv/bin/python", "-m", "edgeos.worker"]
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/edgeos
+      DATABASE_SSLMODE: disable
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  web:
+    build:
+      context: ./apps/web
+      args:
+        NEXT_PUBLIC_API_URL: /api/edgeos
+        NEXT_PUBLIC_APP_MODE: ${NEXT_PUBLIC_APP_MODE:-demo}
+        NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL:-}
+        NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY:-}
+    environment:
+      # Browser requests stay same-origin. The Next.js BFF reaches FastAPI over
+      # Compose's private service network and injects the authenticated session.
+      NEXT_PUBLIC_API_URL: /api/edgeos
+      EDGEOS_INTERNAL_API_ORIGIN: http://api:8000
+      NEXT_PUBLIC_APP_MODE: ${NEXT_PUBLIC_APP_MODE:-demo}
+      NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL:-}
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY:-}
+      SUPABASE_SECRET_KEY: ${SUPABASE_SECRET_KEY:-}
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
+
+volumes:
+  edgeos-postgres:

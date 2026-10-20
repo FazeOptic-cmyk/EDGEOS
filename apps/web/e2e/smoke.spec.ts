@@ -1,0 +1,3 @@
+import { expect, test } from "@playwright/test";
+test("dashboard and scanner render", async ({ page }) => { await page.goto("/"); await expect(page.getByText("Market intelligence, distilled.")).toBeVisible(); await page.goto("/scanner"); await expect(page.getByRole("heading", { name: "Validated pricing discrepancies" })).toBeVisible(); });
+test("mobile navigation opens", async ({ page }, testInfo) => { test.skip(testInfo.project.name !== "mobile"); await page.goto("/"); await page.getByRole("button", { name: "Open navigation" }).click(); await expect(page.getByRole("navigation", { name: "Primary navigation" })).toBeVisible(); });

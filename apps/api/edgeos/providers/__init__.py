@@ -1,0 +1,81 @@
+"""Normalized, read-only external market-data adapters for EDGEOS."""
+
+from .base import (
+    AsyncTTLCache,
+    MarketDataAdapter,
+    MissingCredentialError,
+    ProviderError,
+    ProviderHTTPError,
+    ProviderProtocolError,
+    ProviderUnavailableError,
+    RetryPolicy,
+    UnsupportedCapabilityError,
+)
+from .demo import DemoAdapter
+from .kalshi import KalshiAdapter
+from .models import (
+    AccessMode,
+    DataOrigin,
+    EventQuery,
+    FeedType,
+    MarketQuery,
+    NormalizedEvent,
+    NormalizedMarket,
+    NormalizedOrderBook,
+    NormalizedOutcome,
+    OrderBookLevel,
+    OrderBookQuery,
+    OutcomeOrderBook,
+    PriceType,
+    ProviderCapability,
+    ProviderCode,
+    ProviderDescriptor,
+    ProviderHealth,
+    ProviderPage,
+    ProviderState,
+    RateLimitInfo,
+    SettlementMetadata,
+)
+from .odds_api import TheOddsAPIAdapter
+from .polymarket import PolymarketInternationalAdapter
+from .polymarket_us import PolymarketUSAdapter
+from .unavailable import UnavailableProviderAdapter
+
+__all__ = [
+    "AccessMode",
+    "AsyncTTLCache",
+    "DataOrigin",
+    "DemoAdapter",
+    "EventQuery",
+    "FeedType",
+    "KalshiAdapter",
+    "MarketQuery",
+    "MarketDataAdapter",
+    "MissingCredentialError",
+    "NormalizedEvent",
+    "NormalizedMarket",
+    "NormalizedOrderBook",
+    "NormalizedOutcome",
+    "OrderBookLevel",
+    "OrderBookQuery",
+    "OutcomeOrderBook",
+    "PolymarketInternationalAdapter",
+    "PolymarketUSAdapter",
+    "PriceType",
+    "ProviderCapability",
+    "ProviderCode",
+    "ProviderDescriptor",
+    "ProviderError",
+    "ProviderHealth",
+    "ProviderHTTPError",
+    "ProviderPage",
+    "ProviderProtocolError",
+    "ProviderState",
+    "ProviderUnavailableError",
+    "RateLimitInfo",
+    "RetryPolicy",
+    "SettlementMetadata",
+    "TheOddsAPIAdapter",
+    "UnavailableProviderAdapter",
+    "UnsupportedCapabilityError",
+]

@@ -1,0 +1,94 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  web:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - uses: astral-sh/setup-uv@d0d8abe699bfb85fec6de9f7adb5ae17292296ff # v6
+        with:
+          version: "0.12.23"
+          enable-cache: true
+      - name: Install API for browser workflow tests
+        run: uv sync --locked --project ../api
+      - run: npm ci --no-audit --no-fund
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test -- --run
+      - run: npm run build
+        env:
+          NEXT_PUBLIC_APP_MODE: demo
+          NEXT_PUBLIC_API_URL: /api/edgeos
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e
+
+  api:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/api
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@d0d8abe699bfb85fec6de9f7adb5ae17292296ff # v6
+        with:
+          version: "0.12.23"
+          enable-cache: true
+      - run: uv sync --all-groups --locked
+      - run: uv run ruff check .
+      - run: uv run mypy edgeos
+      - run: uv run pytest
+
+  database:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - run: docker compose up -d postgres
+      - name: Wait for schema container
+        run: |
+          for attempt in $(seq 1 60); do
+            if docker compose exec -T postgres psql -U postgres -d edgeos -tAc "select to_regclass('public.providers') is not null" | grep -q t; then
+              exit 0
+            fi
+            sleep 1
+          done
+          docker compose logs postgres
+          exit 1
+      - name: Run migration and RLS assertions
+        run: docker compose exec -T postgres psql -v ON_ERROR_STOP=1 -U postgres -d edgeos < supabase/tests/schema_assertions.sql
+      - uses: astral-sh/setup-uv@d0d8abe699bfb85fec6de9f7adb5ae17292296ff # v6
+        with:
+          version: "0.12.23"
+          enable-cache: true
+      - name: Create isolated pipeline test database
+        run: docker compose exec -T postgres psql -v ON_ERROR_STOP=1 -U postgres -d postgres -c 'CREATE DATABASE edgeos_test TEMPLATE edgeos'
+      - name: Exercise PostgreSQL ingestion through scanner and alerts
+        working-directory: apps/api
+        env:
+          EDGEOS_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/edgeos_test
+        run: |
+          uv sync --all-groups --locked
+          uv run --locked pytest tests/test_postgres_live_pipeline.py
+      - if: always()
+        run: docker compose down --volumes
+

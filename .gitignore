@@ -1,0 +1,46 @@
+# Dependencies and build output
+node_modules/
+.next/
+out/
+dist/
+artifacts/
+apps/desktop/release/
+apps/desktop/resources/
+apps/api/build/
+coverage/
+playwright-report/
+test-results/
+attachments/
+*.tsbuildinfo
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.venv/
+*.egg-info/
+
+# Local configuration and secrets
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# Runtime data
+*.db
+*.sqlite*
+.cache/
+logs/
+
+# Editors / OS
+.DS_Store
+.idea/
+.vscode/
+*.swp
+
+# Supabase local state
+supabase/.branches/
+supabase/.temp/
+

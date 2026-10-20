@@ -1,0 +1,33 @@
+{
+  "name": "@edgeos/desktop",
+  "productName": "EDGEOS",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Secure Windows desktop host and NSIS installer for EDGEOS",
+  "main": "dist/src/main.js",
+  "author": {
+    "name": "EDGEOS"
+  },
+  "license": "UNLICENSED",
+  "scripts": {
+    "clean": "node scripts/clean.mjs",
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "npm run build && node dist/tests/runtime.test.js",
+    "verify:resources": "node scripts/verify-resources.mjs",
+    "start": "npm run build && electron .",
+    "dist:win": "npm run build && npm run verify:resources && electron-builder --win nsis --publish never"
+  },
+  "devDependencies": {
+    "@electron/asar": "3.4.1",
+    "@electron/fuses": "1.8.0",
+    "@types/node": "24.8.1",
+    "electron": "44.8.0",
+    "electron-builder": "26.15.3",
+    "typescript": "5.9.3"
+  },
+  "engines": {
+    "node": ">=22.0.0",
+    "npm": ">=10.0.0"
+  }
+}

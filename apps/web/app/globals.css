@@ -1,0 +1,66 @@
+@import "tailwindcss";
+
+:root {
+  color-scheme: dark;
+  --background: #080d16;
+  --sidebar: #101a29;
+  --card: #172536;
+  --card-elevated: #1c2d40;
+  --border: #2a3d52;
+  --primary: #57b9f5;
+  --primary-hover: #76cdff;
+  --cyan: #57b9f5;
+  --positive: #40d6a4;
+  --negative: #f17e90;
+  --warning: #f5bc69;
+  --foreground: #f8fafc;
+  --muted: #a6b5c9;
+}
+
+* { box-sizing: border-box; }
+html { background: var(--background); scroll-padding-top: 88px; }
+body {
+  min-width: 320px;
+  margin: 0;
+  background:
+    radial-gradient(circle at 74% -15%, rgba(87, 185, 245, .095), transparent 35rem),
+    var(--background);
+  color: var(--foreground);
+  font-family: "Inter Variable", Inter, ui-sans-serif, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+button, input, select, textarea { font: inherit; }
+button, a { -webkit-tap-highlight-color: transparent; }
+button:not(:disabled), [role="button"]:not([aria-disabled="true"]) { cursor: pointer; }
+::selection { background: rgba(87, 185, 245, .34); color: white; }
+::-webkit-scrollbar { width: 9px; height: 9px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #31485f; border: 2px solid transparent; border-radius: 999px; background-clip: padding-box; }
+
+.font-display { font-family: "Manrope Variable", "Inter Variable", sans-serif; }
+.panel {
+  border: 1px solid rgba(42, 61, 82, .84);
+  background: linear-gradient(145deg, rgba(23, 37, 54, .96), rgba(16, 27, 41, .96));
+  box-shadow: 0 18px 60px rgba(0, 0, 0, .16);
+}
+.focus-ring:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+.text-positive { color: var(--positive); }
+.text-negative { color: var(--negative); }
+.tabular-nums, [data-financial] { font-variant-numeric: tabular-nums; }
+.skeleton {
+  background: linear-gradient(90deg, rgba(42,61,82,.42), rgba(73,101,125,.58), rgba(42,61,82,.42));
+  background-size: 200% 100%;
+  animation: skeleton 1.5s ease-in-out infinite;
+}
+@keyframes skeleton { to { background-position-x: -200%; } }
+@keyframes slide-in { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
+.animate-slide-in { animation: slide-in .22s ease-out; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+}

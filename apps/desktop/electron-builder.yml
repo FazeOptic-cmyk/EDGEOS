@@ -1,0 +1,53 @@
+appId: com.edgeos.research
+productName: EDGEOS
+copyright: Copyright © 2026 EDGEOS
+asar: true
+electronFuses:
+  runAsNode: false
+  enableCookieEncryption: true
+  enableNodeOptionsEnvironmentVariable: false
+  enableNodeCliInspectArguments: false
+  enableEmbeddedAsarIntegrityValidation: true
+  onlyLoadAppFromAsar: true
+  loadBrowserProcessSpecificV8Snapshot: true
+  grantFileProtocolExtraPrivileges: false
+directories:
+  output: release
+  buildResources: build
+files:
+  - dist/src/**/*
+  - package.json
+extraResources:
+  - from: resources/web
+    to: web
+    filter:
+      - "**/*"
+  - from: resources/api
+    to: api
+    filter:
+      - "edgeos-api.exe"
+win:
+  # The API is signed and verified before staging. Preserve those exact bytes so
+  # the resource hash embedded in the signed ASAR remains valid at runtime.
+  signExts:
+    - "!edgeos-api.exe"
+  target:
+    - target: nsis
+      arch:
+        - x64
+  icon: build/icon.ico
+  executableName: EDGEOS
+  artifactName: "EDGEOS Setup ${version}.${ext}"
+  requestedExecutionLevel: asInvoker
+  legalTrademarks: EDGEOS
+nsis:
+  oneClick: false
+  perMachine: false
+  allowElevation: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: EDGEOS
+  uninstallDisplayName: EDGEOS
+  deleteAppDataOnUninstall: false
+  runAfterFinish: false
